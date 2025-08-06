@@ -1,12 +1,12 @@
-import * as vscode from 'vscode';
-import os from 'os';
-import path from 'path';
-import fs from 'fs';
-import testCode, { TestResult } from './tester';
-import * as utils from './utils';
-import { MyTreeDataProvider } from './resultViewer';
+import * as vscode from "vscode";
+import os from "os";
+import path from "path";
+import fs from "fs";
+import testCode, { TestResult } from "./tester";
+import * as utils from "./utils";
+import { MyTreeDataProvider } from "./resultViewer";
 
-let resetTimer = () => {}
+let resetTimer = () => {};
 
 const speedCodePath = path.join(os.homedir(), ".speed-code/");
 
@@ -16,7 +16,10 @@ if (!fs.existsSync(speedCodePath)) {
 
 export async function openAndFocusFile(filePath: string) {
   const document = await vscode.workspace.openTextDocument(filePath);
-  await vscode.window.showTextDocument(document, { preview: false, preserveFocus: false });
+  await vscode.window.showTextDocument(document, {
+    preview: false,
+    preserveFocus: false,
+  });
 }
 
 const userCode = `
@@ -26,12 +29,25 @@ function isPalindrome(s) {
 `;
 
 export function activate(context: vscode.ExtensionContext) {
-  const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
-  statusBarItem.tooltip = 'Speedrun timer';
+  const statusBarItem = vscode.window.createStatusBarItem(
+    vscode.StatusBarAlignment.Left,
+    100
+  );
+  statusBarItem.tooltip = "Speedrun timer";
   statusBarItem.text = "No active Speedrun";
   statusBarItem.show();
 
-  let run: undefined | { path: string, elapsed: number, timer: NodeJS.Timeout, blunders: [number, TestResult[]][] };
+  let run:
+    | undefined
+    | {
+        path: string;
+        elapsed: number;
+        timer: NodeJS.Timeout;
+      };
+
+  const treeDataProvider = new MyTreeDataProvider();
+
+  vscode.window.registerTreeDataProvider("myCustomTab", treeDataProvider);
 
   resetTimer = () => {
     if (run) {
@@ -43,57 +59,69 @@ export function activate(context: vscode.ExtensionContext) {
 
   resetTimer();
 
-  const treeDataProvider = new MyTreeDataProvider();
+  context.subscriptions.push(
+    vscode.commands.registerCommand("speed-code.submitSpeedRun", () => {
+      if (run) {
+        try {
+          const [isValid, res] = testCode(
+            fs.readFileSync(run.path).toString(),
+            [
+              { input: ["racecar"], expected: true },
+              { input: ["hello"], expected: false },
+              { input: ["madam"], expected: true },
+            ]
+          );
 
-  vscode.window.registerTreeDataProvider('myCustomTab', treeDataProvider);
+          if (isValid) {
+            treeDataProvider.testResults = res;
+            treeDataProvider.testSummary = {
+              elapsed: run.elapsed,
+              valid: isValid,
+            };
+            resetTimer();
+          } else {
+            treeDataProvider.blunders.push([run.elapsed, res]);
+          }
 
-  context.subscriptions.push(vscode.commands.registerCommand('speed-code.submitSpeedRun', () => {
-    if (run) {
-      try {
-        const [isValid, res] = testCode(fs.readFileSync(run.path).toString(), [
-          { input: ["racecar"], expected: true },
-          { input: ["hello"], expected: false },
-          { input: ["madam"], expected: true },
-        ]);
-
-        treeDataProvider.testResults = res;
-        treeDataProvider.testSummary = { elapsed: run.elapsed, valid: isValid };
-        treeDataProvider.blunders = run.blunders;
-        treeDataProvider.refresh();
-
-        if (isValid) {
-          resetTimer();
+          treeDataProvider.refresh();
+        } catch (e) {
+          treeDataProvider.blunders.push([run.elapsed, String(e)]);
         }
-      } catch {
-        // TODO: blunders
       }
-    }
-  }));
+    })
+  );
 
+  context.subscriptions.push(
+    vscode.commands.registerCommand("speed-code.startSpeedRun", () => {
+      treeDataProvider.testSummary = undefined;
+      treeDataProvider.testResults = [];
+      treeDataProvider.blunders = [];
+      const runFilePath = path.join(speedCodePath, "isPalindrome.js");
+      fs.writeFileSync(runFilePath, "");
+      openAndFocusFile(runFilePath);
 
-  context.subscriptions.push(vscode.commands.registerCommand('speed-code.startSpeedRun', () => {
-    const runFilePath = path.join(speedCodePath, 'isPalindrome.js');
-    fs.writeFileSync(runFilePath, '');
-    openAndFocusFile(runFilePath);
+      const startTime = Date.now();
+      run = {
+        path: runFilePath,
+        elapsed: 0,
+        timer: setInterval(() => {
+          if (!run) return;
+          const currentTime = Date.now();
+          run.elapsed = (currentTime - startTime) / 1000;
+          statusBarItem.text = utils.format(run.elapsed);
+          statusBarItem.color = "#fff";
+        }, 10),
+      };
 
-    const startTime = Date.now();
-    run = {
-      path: runFilePath,
-      elapsed: 0,
-      blunders: [],
-      timer: setInterval(() => {
-        if (!run) return;
-        const currentTime = Date.now();
-        run.elapsed = (currentTime - startTime) / 1000;
-        statusBarItem.text = utils.format(run.elapsed);
-        statusBarItem.color = '#fff';
-      }, 10),
-    };
+      vscode.window.showInformationMessage("Speedrun Started!");
+    }),
+    statusBarItem
+  );
 
-    vscode.window.showInformationMessage('Speedrun Started!');
-  }), statusBarItem);
-
-  context.subscriptions.push(vscode.commands.registerCommand('speed-code.cancelSpeedRun', resetTimer), statusBarItem);
+  context.subscriptions.push(
+    vscode.commands.registerCommand("speed-code.cancelSpeedRun", resetTimer),
+    statusBarItem
+  );
 }
 
 export function deactivate() {
