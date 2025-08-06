@@ -6,13 +6,19 @@
   "engines": {
     "vscode": "^1.70.0"
   },
-  "activationEvents": [],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
         "command": "speed-code.startSpeedRun",
-        "title": "Hello World"
+        "title": "Start Speed Run"
+      },
+      {
+        "command": "speed-code.cancelSpeedRun",
+        "title": "Cancel Speed Run"
       }
     ]
   },
@@ -22,8 +28,9 @@
     "watch": "tsc -watch -p ./"
   },
   "devDependencies": {
+    "@types/node": "^24.2.0",
     "@types/vscode": "^1.70.0",
-    "typescript": "^5.0.0",
-    "tslint": "^6.0.0"
+    "tslint": "^6.0.0",
+    "typescript": "^5.0.0"
   }
 }
