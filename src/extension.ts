@@ -3,6 +3,7 @@ import os from 'os';
 import path from 'path';
 import fs from 'fs';
 import testCode from './tester';
+import * as utils from './utils';
 
 let resetTimer = () => {}
 
@@ -29,59 +30,52 @@ export function activate(context: vscode.ExtensionContext) {
   statusBarItem.text = "No active Speedrun";
   statusBarItem.show();
 
-  let timer: undefined | NodeJS.Timeout;
+  let run: undefined | { path: string, elapsed: number, timer: NodeJS.Timeout };
 
   resetTimer = () => {
-    if (timer) {
-      clearInterval(timer);
+    if (run) {
+      clearInterval(run.timer);
+      run = undefined;
     }
     statusBarItem.text = "No active Speedrun";
   };
 
   resetTimer();
 
+  context.subscriptions.push(vscode.commands.registerCommand('speed-code.submitSpeedRun', () => {
+    if (run) {
+      const [isValid, res] = testCode(fs.readFileSync(run.path).toString(), [
+        { input: ["racecar"], expected: true },
+        { input: ["hello"], expected: true },
+        { input: ["madam"], expected: true },
+      ]);
+
+      vscode.window.showInformationMessage('Time: ' + run.elapsed);
+
+      if (isValid) {
+        resetTimer();
+      }
+    }
+  }));
+
+
   context.subscriptions.push(vscode.commands.registerCommand('speed-code.startSpeedRun', () => {
     const runFilePath = path.join(speedCodePath, 'isPalindrome.js');
     fs.writeFileSync(runFilePath, '');
-
     openAndFocusFile(runFilePath);
 
-    setTimeout(() => {
-      const [isValid, res] = testCode(fs.readFileSync(runFilePath).toString(), [{
-        input: ["racecar"],
-        expected: true
-      },{
-        input: ["hello"],
-        expected: false
-      },{
-        input: ["madam"],
-        expected: true
-      },]);
-
-      vscode.window.showInformationMessage('Speedrun info: ' + JSON.stringify(res) + 'Summary: ' + isValid);
-    }, 2000);
-
     const startTime = Date.now();
-    timer = setInterval(() => {
-      const currentTime = Date.now();
-      const timeSeconds = (currentTime - startTime) / 1000;
-      if (timeSeconds > 86400) {
-        const days = Math.floor(timeSeconds / 86400);
-        const hours = Math.floor(timeSeconds / 3600);
-        const minutes = Math.floor(timeSeconds / 60);
-        statusBarItem.text = `${days}:${hours - (days * 24)}:${minutes - (hours * 60)}:${(timeSeconds - (minutes * 60)).toFixed(3)}`;
-      } else if (timeSeconds >= 3600) {
-        const hours = Math.floor(timeSeconds / 3600);
-        const minutes = Math.floor(timeSeconds / 60);
-        statusBarItem.text = `${hours}:${minutes - (hours * 60)}:${(timeSeconds - (minutes * 60)).toFixed(3)}`;
-      } else if (timeSeconds >= 60) {
-        const minutes = Math.floor(timeSeconds / 60);
-        statusBarItem.text = `${minutes}:${(timeSeconds - (minutes * 60)).toFixed(3)}`;
-      } else {
-        statusBarItem.text = `${timeSeconds}`;
-      }
-      statusBarItem.color = '#fff';
-    }, 10);
+    run = {
+      path: runFilePath,
+      elapsed: 0,
+      timer: setInterval(() => {
+        if (!run) return;
+        const currentTime = Date.now();
+        run.elapsed = (currentTime - startTime) / 1000;
+        statusBarItem.text = utils.format(run.elapsed);
+        statusBarItem.color = '#fff';
+      }, 10),
+    };
 
     vscode.window.showInformationMessage('Speedrun Started!');
   }), statusBarItem);

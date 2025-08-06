@@ -20,6 +20,13 @@
         "command": "speed-code.cancelSpeedRun",
         "title": "Cancel Speed Run"
       }
+    ],
+    "keybindings": [
+      {
+        "command": "speed-code.submitSpeedRun",
+        "key": "shift+enter",
+        "when": "editorTextFocus"
+      }
     ]
   },
   "scripts": {
