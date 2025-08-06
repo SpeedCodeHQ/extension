@@ -28,6 +28,12 @@ function isPalindrome(s) {
 }
 `;
 
+const treeDataProvider = new MyTreeDataProvider();
+
+const treeView = vscode.window.createTreeView("speedCodeResultTab", {
+  treeDataProvider,
+});
+
 export function activate(context: vscode.ExtensionContext) {
   const statusBarItem = vscode.window.createStatusBarItem(
     vscode.StatusBarAlignment.Left,
@@ -45,10 +51,6 @@ export function activate(context: vscode.ExtensionContext) {
         timer: NodeJS.Timeout;
       };
 
-  const treeDataProvider = new MyTreeDataProvider();
-
-  vscode.window.registerTreeDataProvider("myCustomTab", treeDataProvider);
-
   resetTimer = () => {
     if (run) {
       clearInterval(run.timer);
@@ -58,6 +60,7 @@ export function activate(context: vscode.ExtensionContext) {
   };
 
   resetTimer();
+  updateTreeMessage();
 
   context.subscriptions.push(
     vscode.commands.registerCommand("speed-code.submitSpeedRun", () => {
@@ -84,6 +87,7 @@ export function activate(context: vscode.ExtensionContext) {
           }
 
           treeDataProvider.refresh();
+          updateTreeMessage();
         } catch (e) {
           treeDataProvider.blunders.push([run.elapsed, String(e)]);
         }
@@ -96,6 +100,7 @@ export function activate(context: vscode.ExtensionContext) {
       treeDataProvider.testSummary = undefined;
       treeDataProvider.testResults = [];
       treeDataProvider.blunders = [];
+      updateTreeMessage();
       const runFilePath = path.join(speedCodePath, "isPalindrome.js");
       fs.writeFileSync(runFilePath, "");
       openAndFocusFile(runFilePath);
@@ -119,11 +124,29 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("speed-code.cancelSpeedRun", resetTimer),
+    vscode.commands.registerCommand("speed-code.cancelSpeedRun", () => {
+      resetTimer();
+      treeDataProvider.testSummary = undefined;
+      treeDataProvider.testResults = [];
+      treeDataProvider.blunders = [];
+      treeDataProvider.refresh();
+    }),
     statusBarItem
   );
 }
 
 export function deactivate() {
   resetTimer();
+}
+
+function updateTreeMessage() {
+  if (
+    !treeDataProvider.testResults.length &&
+    !treeDataProvider.blunders.length &&
+    !treeDataProvider.testSummary
+  ) {
+    treeView.message = "No results yet. Start a speedrun!";
+  } else {
+    treeView.message = "";
+  }
 }

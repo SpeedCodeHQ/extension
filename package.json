@@ -31,19 +31,19 @@
     "viewsContainers": {
       "panel": [
         {
-          "id": "myCustomPanel",
-          "title": "My Custom Panel",
-          "icon": "$(file-code)"
+          "id": "speedCodeResultPanel",
+          "title": "Speed Code",
+          "icon": "./timer.svg"
         }
       ]
     },
     "views": {
-      "myCustomPanel": [
+      "speedCodeResultPanel": [
         {
           "type": "tree",
-          "id": "myCustomTab",
-          "name": "My Tab",
-          "icon": "$(file-code)"
+          "id": "speedCodeResultTab",
+          "name": "Speed Code",
+          "icon": "./timer.svg"
         }
       ]
     }
