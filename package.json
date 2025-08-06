@@ -1,0 +1,29 @@
+{
+  "name": "speed-code",
+  "displayName": "Speed Code",
+  "description": "The VSCode extension for SpeedCode",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.70.0"
+  },
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "speed-code.startSpeedRun",
+        "title": "Hello World"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "tsc -p ./",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.70.0",
+    "typescript": "^5.0.0",
+    "tslint": "^6.0.0"
+  }
+}
