@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import os from "os";
 import path from "path";
 import fs from "fs";
-import testCode, { TestResult } from "./tester";
+import testCode, { TestCase } from "./tester";
 import * as utils from "./utils";
 import { MyTreeDataProvider } from "./resultViewer";
 
@@ -47,6 +47,8 @@ export function activate(context: vscode.ExtensionContext) {
     | undefined
     | {
         path: string;
+        name: string;
+        testCases: TestCase[];
         elapsed: number;
         timer: NodeJS.Timeout;
       };
@@ -68,11 +70,7 @@ export function activate(context: vscode.ExtensionContext) {
         try {
           const [isValid, res] = testCode(
             fs.readFileSync(run.path).toString(),
-            [
-              { input: ["racecar"], expected: true },
-              { input: ["hello"], expected: false },
-              { input: ["madam"], expected: true },
-            ]
+            run.testCases
           );
 
           if (isValid) {
@@ -96,29 +94,59 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("speed-code.startSpeedRun", () => {
-      treeDataProvider.testSummary = undefined;
-      treeDataProvider.testResults = [];
-      treeDataProvider.blunders = [];
-      updateTreeMessage();
-      const runFilePath = path.join(speedCodePath, "isPalindrome.js");
-      fs.writeFileSync(runFilePath, "");
-      openAndFocusFile(runFilePath);
+    vscode.commands.registerCommand("speed-code.startSpeedRun", async () => {
+      const quickPick = vscode.window.createQuickPick();
+      quickPick.placeholder = "Type to search";
+      quickPick.matchOnDescription = true;
+      quickPick.items = utils.problems.map((label) => ({ label }));
+      quickPick.onDidChangeValue((value) => {
+        quickPick.items = utils.problems
+          .filter((prob) => prob.toLowerCase().includes(value.toLowerCase()))
+          .map((label) => ({ label }));
+      });
+      quickPick.onDidAccept(async () => {
+        const selection = quickPick.selectedItems[0];
+        if (selection) {
+          const name = selection.label.toLowerCase();
+          treeDataProvider.testSummary = undefined;
+          treeDataProvider.testResults = [];
+          treeDataProvider.blunders = [];
+          updateTreeMessage();
+          const runFilePath = path.join(speedCodePath, name + ".js");
+          fs.writeFileSync(runFilePath, "");
+          openAndFocusFile(runFilePath);
 
-      const startTime = Date.now();
-      run = {
-        path: runFilePath,
-        elapsed: 0,
-        timer: setInterval(() => {
-          if (!run) return;
-          const currentTime = Date.now();
-          run.elapsed = (currentTime - startTime) / 1000;
-          statusBarItem.text = utils.format(run.elapsed);
-          statusBarItem.color = "#fff";
-        }, 10),
-      };
+          const response = await fetch(
+            `https://raw.githubusercontent.com/SpeedCodeHQ/problems/refs/heads/main/${name}.json`
+          );
 
-      vscode.window.showInformationMessage("Speedrun Started!");
+          if (!response.ok) {
+            vscode.window.showErrorMessage(
+              `Failed to fetch test cases for ${name}: ${response.statusText}`
+            );
+            return;
+          }
+
+          const startTime = Date.now();
+          run = {
+            path: runFilePath,
+            elapsed: 0,
+            name,
+            testCases: (await response.json()) as TestCase[],
+            timer: setInterval(() => {
+              if (!run) return;
+              const currentTime = Date.now();
+              run.elapsed = (currentTime - startTime) / 1000;
+              statusBarItem.text = utils.format(run.elapsed);
+              statusBarItem.color = "#fff";
+            }, 10),
+          };
+
+          vscode.window.showInformationMessage("Speedrun Started!");
+        }
+        quickPick.hide();
+      });
+      quickPick.show();
     }),
     statusBarItem
   );

@@ -1,3 +1,5 @@
+export const problems = ["Palindrome"];
+
 export function format(timeSeconds: number): string {
   if (timeSeconds > 86400) {
     const days = Math.floor(timeSeconds / 86400);
