@@ -1,8 +1,37 @@
 import * as vscode from 'vscode';
+import os from 'os';
+import path from 'path';
+import testCode from './tester';
 
 let resetTimer = () => {}
 
+const speedCodePath = path.join(os.homedir(), ".speed-code/");
+
+export async function openAndFocusFile(filePath: string) {
+    const document = await vscode.workspace.openTextDocument(filePath);
+    await vscode.window.showTextDocument(document, { preview: false, preserveFocus: false });
+}
+
+const userCode = `
+function isPalindrome(s) {
+  return s === s.split('').reverse().join('');
+}
+`;
+
 export function activate(context: vscode.ExtensionContext) {
+  const [isValid, res] = testCode(userCode, [{
+    input: ["racecar"],
+    expected: true
+  },{
+    input: ["hello"],
+    expected: false
+  },{
+    input: ["madam"],
+    expected: true
+  },]);
+
+  vscode.window.showInformationMessage('Speedrun info: ' + JSON.stringify(res));
+
   const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
   statusBarItem.tooltip = 'Speedrun timer';
   statusBarItem.text = "No active Speedrun";
