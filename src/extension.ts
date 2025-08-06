@@ -2,8 +2,9 @@ import * as vscode from 'vscode';
 import os from 'os';
 import path from 'path';
 import fs from 'fs';
-import testCode from './tester';
+import testCode, { TestResult } from './tester';
 import * as utils from './utils';
+import { MyTreeDataProvider } from './resultViewer';
 
 let resetTimer = () => {}
 
@@ -30,7 +31,7 @@ export function activate(context: vscode.ExtensionContext) {
   statusBarItem.text = "No active Speedrun";
   statusBarItem.show();
 
-  let run: undefined | { path: string, elapsed: number, timer: NodeJS.Timeout };
+  let run: undefined | { path: string, elapsed: number, timer: NodeJS.Timeout, blunders: [number, TestResult[]][] };
 
   resetTimer = () => {
     if (run) {
@@ -42,18 +43,29 @@ export function activate(context: vscode.ExtensionContext) {
 
   resetTimer();
 
+  const treeDataProvider = new MyTreeDataProvider();
+
+  vscode.window.registerTreeDataProvider('myCustomTab', treeDataProvider);
+
   context.subscriptions.push(vscode.commands.registerCommand('speed-code.submitSpeedRun', () => {
     if (run) {
-      const [isValid, res] = testCode(fs.readFileSync(run.path).toString(), [
-        { input: ["racecar"], expected: true },
-        { input: ["hello"], expected: true },
-        { input: ["madam"], expected: true },
-      ]);
+      try {
+        const [isValid, res] = testCode(fs.readFileSync(run.path).toString(), [
+          { input: ["racecar"], expected: true },
+          { input: ["hello"], expected: false },
+          { input: ["madam"], expected: true },
+        ]);
 
-      vscode.window.showInformationMessage('Time: ' + run.elapsed);
+        treeDataProvider.testResults = res;
+        treeDataProvider.testSummary = { elapsed: run.elapsed, valid: isValid };
+        treeDataProvider.blunders = run.blunders;
+        treeDataProvider.refresh();
 
-      if (isValid) {
-        resetTimer();
+        if (isValid) {
+          resetTimer();
+        }
+      } catch {
+        // TODO: blunders
       }
     }
   }));
@@ -68,6 +80,7 @@ export function activate(context: vscode.ExtensionContext) {
     run = {
       path: runFilePath,
       elapsed: 0,
+      blunders: [],
       timer: setInterval(() => {
         if (!run) return;
         const currentTime = Date.now();

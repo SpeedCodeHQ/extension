@@ -27,7 +27,26 @@
         "key": "shift+enter",
         "when": "editorTextFocus"
       }
-    ]
+    ],
+    "viewsContainers": {
+      "panel": [
+        {
+          "id": "myCustomPanel",
+          "title": "My Custom Panel",
+          "icon": "$(file-code)"
+        }
+      ]
+    },
+    "views": {
+      "myCustomPanel": [
+        {
+          "type": "tree",
+          "id": "myCustomTab",
+          "name": "My Tab",
+          "icon": "$(file-code)"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "tsc -p ./",
