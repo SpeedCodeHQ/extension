@@ -38,5 +38,5 @@ export default function testCode(code: string, testCases: TestCase[]): [boolean,
         }
     });
 
-    return [tests.every(t => t), tests];
+    return [tests.every(t => t.valid), tests];
 }
