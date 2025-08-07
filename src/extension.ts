@@ -108,17 +108,17 @@ export function activate(context: vscode.ExtensionContext) {
       quickPick.onDidAccept(async () => {
         const selection = quickPick.selectedItems[0];
         if (selection) {
-          const name = selection.label.toLowerCase();
+          const name = selection.label.toLowerCase().replace(' ', '-');
           treeDataProvider.testSummary = undefined;
           treeDataProvider.testResults = [];
           treeDataProvider.blunders = [];
           treeDataProvider.refresh();
-          const runFilePath = path.join(speedCodePath, name + ".js");
+          const runFilePath = path.join(speedCodePath, name.replace('-', '_') + ".js");
           fs.writeFileSync(runFilePath, "");
           openAndFocusFile(runFilePath);
 
           const response = await fetch(
-            `https://raw.githubusercontent.com/SpeedCodeHQ/problems/refs/heads/main/${name}.json`
+            `https://raw.githubusercontent.com/SpeedCodeHQ/problems/refs/heads/main/problems/${name}.json`
           );
 
           if (!response.ok) {

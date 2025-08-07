@@ -1,4 +1,4 @@
-export const problems = ["Palindrome"];
+export const problems = ["Two Sum", "Palindrome", "Fibonacci", "Factorial", "Find Missing Number", "Anagram", "Reverse Words In a Sentence"];
 
 export function format(timeSeconds: number): string {
   if (timeSeconds > 86400) {
