@@ -73,12 +73,13 @@ export function activate(context: vscode.ExtensionContext) {
             run.testCases
           );
 
+          treeDataProvider.testResults = res;
+          treeDataProvider.testSummary = {
+            elapsed: run.elapsed,
+            valid: isValid,
+          };
+
           if (isValid) {
-            treeDataProvider.testResults = res;
-            treeDataProvider.testSummary = {
-              elapsed: run.elapsed,
-              valid: isValid,
-            };
             resetTimer();
           } else {
             treeDataProvider.blunders.push([run.elapsed, res]);
@@ -111,7 +112,7 @@ export function activate(context: vscode.ExtensionContext) {
           treeDataProvider.testSummary = undefined;
           treeDataProvider.testResults = [];
           treeDataProvider.blunders = [];
-          updateTreeMessage();
+          treeDataProvider.refresh();
           const runFilePath = path.join(speedCodePath, name + ".js");
           fs.writeFileSync(runFilePath, "");
           openAndFocusFile(runFilePath);
@@ -142,6 +143,7 @@ export function activate(context: vscode.ExtensionContext) {
             }, 10),
           };
 
+          updateTreeMessage();
           vscode.window.showInformationMessage("Speedrun Started!");
         }
         quickPick.hide();
